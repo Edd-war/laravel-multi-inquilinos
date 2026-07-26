@@ -35,6 +35,8 @@ namespace App\Models;
 use Laravel\Jetstream\Team as JetstreamTeam;
 use Eddwar\Multitenencia\Contracts\EsInquilino;
 use Eddwar\Multitenencia\Models\Concerns\ImplementaInquilino;
+use Eddwar\Multitenencia\Models\Concerns\UtilizaConexionDelPropietario;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Team extends JetstreamTeam implements EsInquilino
 {
@@ -43,6 +45,8 @@ class Team extends JetstreamTeam implements EsInquilino
     use ImplementaInquilino;
 }
 ```
+
+> **Nota**: Si tu modelo personalizado usa múltiples bases de datos, asegúrate de que tenga un atributo `base_de_datos` compatible con `TareaDelCambioDeBaseDeDatosDelInquilino`, o implementa el método `obtenerNombreDeBaseDeDatos()` de `EsInquilino` según corresponda.
 
 ## Realizar acciones cuando se crea un inquilino
 

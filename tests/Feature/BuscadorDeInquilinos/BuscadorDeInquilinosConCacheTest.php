@@ -56,15 +56,58 @@ it('clears the cache when a tenant is saved or deleted', function () {
     // Resolve to populate cache
     $this->tenantFinder->buscarParaPeticion($request);
 
-    // Check that model cache key exists
-    expect(Cache::has("multitenencia:model:{$inquilino->id}"))->toBeTrue();
-    expect(Cache::has('multitenencia:domains_map'))->toBeTrue();
+    $cacheStore = config('multitenencia.cache.store_del_propietario') ?? config('cache.default');
+    /** @var Repository $cache */
+    $cache = Cache::store($cacheStore);
+
+    // Check that model cache key exists in the configured store
+    expect($cache->has("multitenencia:model:{$inquilino->id}"))->toBeTrue();
+    expect($cache->has('multitenencia:domains_map'))->toBeTrue();
 
     // Trigger update (saved event)
     $inquilino->nombre = 'Updated Tenant Name';
     $inquilino->save();
 
-    // Check that cache is cleared
-    expect(Cache::has('multitenencia:domains_map'))->toBeFalse();
-    expect(Cache::has("multitenencia:model:{$inquilino->id}"))->toBeFalse();
+    // Check that cache is cleared in the configured store
+    expect($cache->has('multitenencia:domains_map'))->toBeFalse();
+    expect($cache->has("multitenencia:model:{$inquilino->id}"))->toBeFalse();
+});
+
+it('uses configured store_del_propietario and not the default cache store', function () {
+    /** @var TestCase $this */
+    // Configure an alternative store (array) vs what could be a different default
+    config()->set('multitenencia.cache.store_del_propietario', 'array');
+    config()->set('cache.default', 'file');
+
+    $inquilino = Inquilino::factory()->create(['dominio' => 'tenant-c.com']);
+    $request = Request::create('https://tenant-c.com');
+
+    $this->tenantFinder->buscarParaPeticion($request);
+
+    // Cache should be in the 'array' store
+    $arrayStore = Cache::store('array');
+    expect($arrayStore->has('multitenencia:domains_map'))->toBeTrue();
+
+    // Default 'file' store should NOT have the key
+    $fileStore = Cache::store('file');
+    expect($fileStore->has('multitenencia:domains_map'))->toBeFalse();
+});
+
+it('clears cache in the configured store when a tenant is deleted', function () {
+    /** @var TestCase $this */
+    $inquilino = Inquilino::factory()->create(['dominio' => 'tenant-d.com']);
+    $request = Request::create('https://tenant-d.com');
+
+    $this->tenantFinder->buscarParaPeticion($request);
+
+    $cacheStore = config('multitenencia.cache.store_del_propietario') ?? config('cache.default');
+    $cache = Cache::store($cacheStore);
+
+    expect($cache->has("multitenencia:model:{$inquilino->id}"))->toBeTrue();
+
+    // Delete tenant
+    $inquilino->delete();
+
+    expect($cache->has("multitenencia:model:{$inquilino->id}"))->toBeFalse();
+    expect($cache->has('multitenencia:domains_map'))->toBeFalse();
 });

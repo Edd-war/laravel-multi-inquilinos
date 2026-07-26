@@ -72,7 +72,7 @@ fi
 
 echo ""
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
-echo -e "${MAGENTA}  📦 Laravel Multi-Inquilinos - Script de Publicación${NC}"
+echo -e "${MAGENTA}  📦 Laravel Multitenencia - Script de Publicación${NC}"
 echo -e "${MAGENTA}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -143,15 +143,15 @@ fi
 
 # Obtener última versión
 step "Obteniendo última versión..."
-LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v4.1.1")
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v13.0.0")
 info "Última versión: $LAST_TAG"
 
 # Calcular nueva versión
 VERSION=${LAST_TAG#v}
 IFS='.' read -ra PARTS <<< "$VERSION"
-MAJOR=${PARTS[0]:-4}
-MINOR=${PARTS[1]:-1}
-PATCH=${PARTS[2]:-1}
+MAJOR=${PARTS[0]:-13}
+MINOR=${PARTS[1]:-0}
+PATCH=${PARTS[2]:-0}
 
 case $TYPE in
     major)
@@ -235,10 +235,10 @@ echo -e "${GREEN}  🎉 ¡Publicación completada!${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo "  Versión: $NEW_VERSION"
-echo "  Tag:     https://github.com/edd-war/laravel-multi-inquilinos/releases/tag/$NEW_VERSION"
+echo "  Tag:     https://github.com/Edd-war/laravel-multitenencia/releases/tag/$NEW_VERSION"
 echo ""
-echo "  Los workflows de GitHub Actions se ejecutarán automáticamente:"
-echo "    • 03-release.yml → Crear GitHub Release"
-echo "    • 04-validar-release-composer.yml → Validar paquete"
-echo "    • 05-publish-composer.yml → Publicar en GitHub Packages"
+echo "  Si están configurados, los workflows de GitHub Actions se ejecutarán automáticamente:"
+echo "    • Release → Crear GitHub Release"
+echo "    • Validación Composer → Validar paquete"
+echo "    • Publicación Composer → Publicar en GitHub Packages"
 echo ""

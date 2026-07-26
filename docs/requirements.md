@@ -1,6 +1,6 @@
 ---
-title: Requirements
+title: Requisitos
 weight: 4
 ---
 
-This package requires **PHP 8.2+** and **Laravel 11.0+**.
+Este paquete requiere **PHP 8.5+** y **Laravel 13.x**.

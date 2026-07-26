@@ -57,18 +57,18 @@ class TareaDeCacheDePrefijos implements TareaDeCambioDeInquilino
 }
 ```
 
-## Registering a task
+## Registrar una tarea
 
-After creating a task, you must register it by putting its class name in the `switch_tenant_tasks` key of the `multitenencia` config file.
+Después de crear una tarea, debes registrarla colocando su nombre de clase en la clave `tareas_de_cambio_de_inquilino` del archivo de configuración `multitenencia.php`.
 
 ## Accepting parameters
 
 Classes that implement `TareaDeCambioDeInquilino` can accept parameters from the `multitenencia` config file.
 
 ```php
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     \App\Support\TareaDeCambioDeInquilinos\YourTask::class => ['name' => 'value', 'anotherName' => 'value'],
-    // other tasks
+    // otras tareas
 ],
 ```
 
@@ -97,7 +97,7 @@ use Eddwar\Multitenencia\Tasks\TareaDeCambioDeInquilino;
 
 class TareaDelCambioDeBaseDeDatosDelInquilino implements TareaDeCambioDeInquilino
 {
-    public function __construct(string $name, string $anotherName, MyDepencency $myDependency)
+    public function __construct(string $name, string $anotherName, MyDependency $myDependency)
     {
         // do something
     }

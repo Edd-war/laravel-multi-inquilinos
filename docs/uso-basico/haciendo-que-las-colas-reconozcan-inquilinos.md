@@ -75,4 +75,4 @@ dispatch(function () use ($tenant) {
 
 Si un trabajo en cola que reconoce al inquilino no puede recuperar el inquilino (por ejemplo, porque el inquilino fue eliminado antes de que se procesara el trabajo), el trabajo fallará lanzando una instancia de `Eddwar\Multitenencia\Exceptions\ExcepcionInquilinoActualNoReconocidoEnTrabajoEnCola`.
 
-Por otro lado, un trabajo que no reconoce al inquilino no realizará ninguna modificación al inquilino actual, que podría seguir configurado a partir de un trabajo anterior. Como tal, es importante que sus trabajos no asuman nada sobre el inquilino activo a menos que reconozcan explícitamente al inquilino.
+Por otro lado, un trabajo que no reconoce al inquilino forzará la limpieza del contexto de inquilino antes de ejecutarse. El paquete llama internamente a `olvidarActual()` para este tipo de trabajos, por lo que es seguro asumir que no habrá un inquilino activo durante su ejecución.

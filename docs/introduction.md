@@ -1,14 +1,12 @@
 ---
-title: Introduction
+title: Introducción
 weight: 1
 ---
 
-This package can make a Laravel app tenant aware. The philosophy of this package is that it should only provide the bare essentials to enable multitenencia.
+Este paquete permite que una aplicación Laravel sea consciente del inquilino actual. La filosofía del paquete es que solo debe proporcionar lo esencial para habilitar la multitenencia.
 
-The package can determine which tenant should be the current tenant for the request. It also allows you to define what should happen when making a tenant the current one. It works for multitenencia projects that need to use one or multiple databases.
+El paquete puede determinar qué inquilino debe ser el actual para cada solicitud. También permite definir qué debe suceder al cambiar el inquilino actual. Funciona tanto para proyectos de multitenencia con una sola base de datos como con múltiples bases de datos.
 
-Before starting with the package, we highly recommend first watching [this talk by Tom Schlick on multitenencia strategies](https://tomschlick.com/laracon-2017-multi-tenancy-talk/).
+Antes de comenzar con el paquete, recomendamos ver [esta charla de Tom Schlick sobre estrategias de multitenencia](https://tomschlick.com/laracon-2017-multi-tenancy-talk/).
 
-The package contains a lot of niceties such as making queued jobs tenant aware, making an artisan command run for each tenant, an easy way to set a connection on a model, and much more.
-
-Are you a visual learner? Then watch [this video](https://www.youtube.com/watch?v=1bucfsyAZtI) that covers how you can use laravel-multitenencia and how it works under the hood.
+El paquete incluye utilidades como: hacer que los trabajos en cola reconozcan inquilinos, ejecutar un comando Artisan para cada inquilino, establecer conexiones de base de datos de forma dinámica por inquilino, y mucho más.

@@ -1,29 +1,23 @@
-name: Check & fix styling
+name: lint
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
-    style:
-        runs-on: ubuntu-latest
+  pint:
+    runs-on: ubuntu-latest
 
-        steps:
-            -   name: Checkout code
-                uses: actions/checkout@v3
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            -   name: Fix style
-                uses: docker://oskarstark/php-cs-fixer-ga
-                with:
-                    args: --config=.php-cs-fixer.dist.php --allow-risky=yes
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
 
-            -   name: Extract branch name
-                shell: bash
-                run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-                id: extract_branch
+      - name: Install dependencies
+        run: composer update --prefer-stable --prefer-dist --no-interaction
 
-            -   name: Commit changes
-                uses: stefanzweifel/git-auto-commit-action@v4.4.1
-                with:
-                    commit_message: Fix styling
-                    branch: ${{ steps.extract_branch.outputs.branch }}
-                env:
-                    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check code style
+        run: vendor/bin/pint --preset laravel --test --ansi

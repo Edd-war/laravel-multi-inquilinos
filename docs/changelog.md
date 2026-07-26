@@ -3,4 +3,4 @@ title: Changelog
 weight: 6
 ---
 
-All notable changes to laravel-multitenencia are documented [on GitHub](https://github.com/spatie/laravel-multitenencia/blob/master/CHANGELOG.md)
+Todos los cambios notables de `laravel-multitenencia` se documentan en el [CHANGELOG.md](../CHANGELOG.md) del repositorio.

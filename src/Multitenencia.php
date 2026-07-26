@@ -83,7 +83,7 @@ class Multitenencia
     {
         $this
             ->obtenerLaClaseDeAccionDeMultitenencia(
-                actionName: 'make_queue_tenant_aware_action',
+                actionName: 'accion_hacer_cola_inquilino_reconocido',
                 actionClass: AccionHacerColaInquilinoReconocido::class
             )
             ->execute();

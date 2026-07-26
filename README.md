@@ -1,33 +1,115 @@
 # Un paquete de multitenencia sin opiniones para Laravel
 
-Este paquete puede hacer que una aplicación de Laravel sea consciente del inquilino. La filosofía de este paquete es que solo debe proporcionar lo esencial para habilitar la multitenencia.
+[![Pruebas](https://github.com/Edd-war/laravel-multitenencia/actions/workflows/run-tests.yml/badge.svg)](https://github.com/Edd-war/laravel-multitenencia/actions/workflows/run-tests.yml)
 
-El paquete puede determinar qué inquilino debe ser el inquilino actual para la solicitud. También le permite definir qué debería suceder al cambiar el inquilino actual a otro. Funciona para proyectos de multitenencia que necesitan utilizar una o múltiples bases de datos.
+Este paquete permite que una aplicación Laravel sea consciente del inquilino actual. La filosofía del paquete es que solo debe proporcionar lo esencial para habilitar la multitenencia.
 
-El paquete contiene una gran cantidad de utilidades, como hacer que los trabajos en cola reconozcan inquilinos, hacer que un comando de Artisan se ejecute para cada inquilino, una forma fácil de establecer una conexión en un modelo y mucho más.
+El paquete puede determinar qué inquilino debe ser el actual para cada solicitud. También permite definir qué debe suceder al cambiar de inquilino. Funciona para proyectos que necesitan una o múltiples bases de datos por inquilino.
 
-## Documentación
+Incluye utilidades como: hacer que los trabajos en cola reconozcan inquilinos, ejecutar un comando Artisan para cada inquilino, establecer conexiones de base de datos dinámicamente, y mucho más.
 
-Puede encontrar la documentación completa en la carpeta [docs](docs).
+---
+
+## Requisitos
+
+- **PHP 8.5+**
+- **Laravel 13.x**
+
+---
+
+## Instalación
+
+```bash
+composer require edd-war/laravel-multitenencia
+```
+
+### Publicar configuración
+
+```bash
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-config"
+```
+
+### Publicar migraciones
+
+```bash
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-migrations"
+```
+
+---
+
+## Uso mínimo
+
+### 1. Configurar el buscador de inquilinos
+
+```php
+// config/multitenencia.php
+
+'buscador_de_inquilinos' => \Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
+```
+
+### 2. Obtener el inquilino actual
+
+```php
+use Eddwar\Multitenencia\Models\Inquilino;
+
+Inquilino::actual();        // ?Inquilino
+Inquilino::comprobarActual(); // bool
+Inquilino::olvidarActual();
+```
+
+### 3. Ejecutar un comando para cada inquilino
+
+```bash
+php artisan tenants:artisan "migrate --database=inquilino"
+php artisan tenants:artisan "migrate --database=inquilino --seed" --tenant=123
+```
+
+### 4. Comandos de migración dedicados
+
+```bash
+php artisan tenant:migrate
+php artisan tenant:rollback
+php artisan tenant:migrate:status
+```
+
+---
+
+## Calidad de código
+
+```bash
+composer format    # Formatear código con Laravel Pint
+composer analyse   # Análisis estático con PHPStan/Larastan
+composer test      # Ejecutar suite de pruebas con Pest
+```
+
+---
 
 ## Pruebas
 
-Tendrá que crear las siguientes 3 bases de datos MySQL locales para poder ejecutar la suite de pruebas:
+Debes crear las siguientes bases de datos MySQL locales para ejecutar la suite de pruebas:
 
 - `laravel_mt_propietario`
 - `laravel_mt_tenant_1`
 - `laravel_mt_tenant_2`
 
-Puede ejecutar las pruebas del paquete con:
-
 ```bash
 composer test
 ```
 
-## Historial de Cambios
+---
 
-Consulte el [Historial de Cambios](HISTORIAL_DE_CAMBIOS.md) para obtener más información sobre lo que ha cambiado recientemente.
+## Documentación
+
+La documentación completa se encuentra en la carpeta [docs](docs).
+
+---
+
+## Historial de cambios
+
+Consulta el [CHANGELOG](CHANGELOG.md) para ver los cambios recientes.
+
+---
 
 ## Licencia
 
-La Licencia MIT (MIT). Consulte el [Archivo de Licencia](LICENCIA.md) para obtener más información.
+La Licencia MIT (MIT). Consulta el [archivo de licencia](LICENSE.md) para más información.

@@ -4,6 +4,7 @@ namespace Eddwar\Multitenencia\BuscadorDeInquilinos;
 
 use Eddwar\Multitenencia\Concerns\UtilizaConfiguracionMultitenencia;
 use Eddwar\Multitenencia\Contracts\EsInquilino;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -96,7 +97,7 @@ class BuscadorDeInquilinosPorHeaders extends BuscadorDeInquilinos
      */
     protected function obtenerMapaDeDominiosInquilinos(): array
     {
-        return Cache::rememberForever('multitenencia:domains_map', function () {
+        return $this->cacheDelPropietario()->rememberForever('multitenencia:domains_map', function () {
             $configuredDomains = $this->dominiosInquilinos();
             /** @var Model&EsInquilino $tenantModel */
             $tenantModel = app(EsInquilino::class);
@@ -119,10 +120,20 @@ class BuscadorDeInquilinosPorHeaders extends BuscadorDeInquilinos
         $tenantModel = app(EsInquilino::class);
 
         /** @var EsInquilino|null $resolved */
-        $resolved = Cache::remember("multitenencia:model:{$id}", 3600, function () use ($tenantModel, $id) {
+        $resolved = $this->cacheDelPropietario()->remember("multitenencia:model:{$id}", 3600, function () use ($tenantModel, $id) {
             return $tenantModel->newQuery()->find($id);
         });
 
         return $resolved;
+    }
+
+    /**
+     * Resuelve el repositorio de cache configurado para el propietario.
+     */
+    protected function cacheDelPropietario(): CacheRepository
+    {
+        $store = config('multitenencia.cache.store_del_propietario') ?? config('cache.default');
+
+        return Cache::store($store);
     }
 }

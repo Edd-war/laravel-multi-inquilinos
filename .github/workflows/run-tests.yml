@@ -6,24 +6,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: true
-      matrix:
-        php: [8.5, 8.4, 8.3, 8.2]
-        laravel: ['13.*', '12.*', '11.*']
-        stability: [prefer-stable]
-        include:
-          - laravel: 13.*
-            testbench: 11.*
-          - laravel: 12.*
-            testbench: 10.*
-          - laravel: 11.*
-            testbench: 9.*
-        exclude:
-          - laravel: 13.*
-            php: 8.2
-
-    name: P${{ matrix.php }} - L${{ matrix.laravel }} - ${{ matrix.stability }}
+    name: PHP 8.5 - Laravel 13
 
     steps:
       - name: Checkout code
@@ -32,8 +15,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: ${{ matrix.php }}
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, imagick
+          php-version: '8.5'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl
           coverage: none
 
       - name: Create database
@@ -46,14 +29,18 @@ jobs:
       - name: Start Redis
         uses: supercharge/redis-github-action@1.1.0
         with:
-          redis-version: 5
+          redis-version: 7
 
       - name: Install dependencies
-        run: |
-          composer require "laravel/framework:${{ matrix.laravel }}" --no-interaction --no-update
-          composer update --${{ matrix.stability }} --prefer-dist --no-interaction
+        run: composer update --prefer-stable --prefer-dist --no-interaction
 
       - name: Execute tests
-        run: vendor/bin/pest
+        run: composer test
         env:
           DB_PASSWORD: root
+
+      - name: Static analysis
+        run: composer analyse
+
+      - name: Code style
+        run: composer format

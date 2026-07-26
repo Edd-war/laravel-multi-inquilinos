@@ -1,148 +1,151 @@
 ---
-title: Using multiple databases
+title: Usando múltiples bases de datos
 weight: 3
 ---
 
-Before using the following instructions, make sure you have performed [the base installation steps](/docs/laravel-multitenencia/v4/installation/base-installation) first.
+Antes de seguir estas instrucciones, asegúrate de haber completado la [instalación base](instalacion-base.md).
 
-Only use the instructions on this page if you want each of your tenants to have their own database.
+Usa las instrucciones de esta página solo si quieres que cada inquilino tenga su propia base de datos.
 
-## Configuring the database connections
+## Configurar las conexiones de base de datos
 
-When using a separate database for each tenant, your Laravel app needs two database connections. One named `propietario`, which points to the database that should contain the `tenants` table and other system-wide related info. The other connection, named `tenant`, points to the database of the tenant that is considered the current tenant for a request.
+Cuando se usa una base de datos separada por inquilino, la aplicación Laravel necesita dos conexiones: una llamada `propietario`, que apunta a la base de datos que contiene la tabla `inquilinos` e información general del sistema; y otra llamada `inquilino`, que apunta a la base de datos del inquilino actual.
 
-In the `multitenencia` config file, you must set a name in `tenant_database_connection_name`. You can use `tenant`, but it could be any name that you want. The `propietario_database_connection_name` must also be set. A logical value could be `propietario`, but again, you could use any name you want.
-
-Next, let's create the connections themselves. In the `database` config file, in the `connections` key, you must add a database configuration for the tenant and propietario connections.
-
-In the example below, the `mysql` driver is used, but you can use any driver you'd like. For the `tenant` connection, you should set `database` to `null`. The package will dynamically set the database name depending on the tenant that's considered the current one.
+En el archivo de configuración `multitenencia.php`, debes establecer los nombres de conexión:
 
 ```php
-// in config/database.php
+// en config/multitenencia.php
+
+'nombre_de_conexion_de_la_base_de_datos_del_inquilino' => 'inquilino',
+
+'nombre_de_conexion_de_la_base_de_datos_del_propietario' => 'propietario',
+```
+
+A continuación, crea las conexiones en el archivo `config/database.php`:
+
+```php
+// en config/database.php
 
 'connections' => [
-    'tenant' => [
+    'inquilino' => [
         'driver' => 'mysql',
-        'database' => null,
+        'database' => null, // El paquete lo asigna dinámicamente
         'host' => '127.0.0.1',
         'username' => 'root',
         'password' => '',
-        // And other options if needed ...
+        // Otras opciones si es necesario...
     ],
 
     'propietario' => [
         'driver' => 'mysql',
-        'database' => 'name_of_propietario_db',
+        'database' => 'nombre_de_la_base_de_datos_propietario',
         'host' => '127.0.0.1',
         'username' => 'root',
         'password' => '',
-        // And other options if needed ...
+        // Otras opciones si es necesario...
     ],
 ],
 ```
 
-### Migrating the propietario database
+### Migrar la base de datos del propietario
 
-With the database connection set up, we can migrate the propietario database.
+Con la conexión configurada, podemos migrar la base de datos del propietario.
 
-First, you must publish the migration file:
+Primero, publica el archivo de migración:
 
 ```bash
-php artisan vendor:publish --provider="Eddwar\Multitenencia\MultitenenciaServiceProvider" --tag="multitenencia-migrations"
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-migrations"
 ```
 
-The command above will publish a migration in `database/migrations/propietario` that will create the `tenants` table.
-
-Perform this command to run that migration. The value of the database option should be the propietario database connection name.
+Luego ejecuta la migración. El valor de la opción `database` debe ser el nombre de la conexión del propietario:
 
 ```bash
 php artisan migrate --path=database/migrations/propietario --database=propietario
 ```
 
-When creating new migrations that should be performed on the propietario database, you should store them in the `database/migrations/propietario` path. After creating your own migrations, use the command above to migrate the propietario database.
+Esto creará la tabla `inquilinos`. Las migraciones propias del propietario deben guardarse en `database/migrations/propietario` y ejecutarse con el comando anterior.
 
-### Automatically switching to the database of the current tenant
+### Cambio automático a la base de datos del inquilino actual
 
-When making a tenant the "current" one, the package will execute all tasks that are specified in the `switch_tenant_tasks` key of the `multitenencia` config file.
+Al hacer que un inquilino sea el "actual", el paquete ejecutará las tareas especificadas en `tareas_de_cambio_de_inquilino` del archivo de configuración `multitenencia.php`.
 
-The package ships with a task called `SwitchTenantDatabase` that will make the tenant database connection use the database whose name is in the `database` attribute of the tenant.
+El paquete incluye `TareaDelCambioDeBaseDeDatosDelInquilino`, que cambia la conexión del inquilino para usar la base de datos cuyo nombre está en el atributo `base_de_datos` del inquilino.
 
-You should add this task to the `switch_tenant_tasks` key.
+Agrégala a la clave `tareas_de_cambio_de_inquilino`:
 
 ```php
+// en config/multitenencia.php
+
 /*
- * These tasks will be performed to make a tenant current.
- *
- * A valid task is any class that implements Eddwar\multitenencia\Tasks\TareaDeCambioDeInquilino
+ * Estas tareas se ejecutan al hacer que un inquilino sea el actual.
+ * Deben implementar Eddwar\Multitenencia\Tasks\TareaDeCambioDeInquilino
  */
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     Eddwar\Multitenencia\Tasks\TareaDelCambioDeBaseDeDatosDelInquilino::class,
 ],
 ```
 
-The package also provides [other tasks](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/overview/) that you could optionally add to `switch_tenant_tasks`. You can also [create a custom task](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/creating-your-own-task/).
+El paquete también incluye [otras tareas](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/descripcion-general/) que puedes agregar opcionalmente. También puedes [crear una tarea personalizada](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/creando-tu-propia-tarea/).
 
-### Creating tenant databases
+### Crear bases de datos de inquilinos
 
-Now that automatic database switching for tenants is configured, you can migrate the tenant databases. Because there are so many ways to go about it, the package does not handle creating databases. You should take care of creating new tenant databases in your own application code. A nice place to trigger this could be [when a `Tenant` model gets created](/docs/laravel-multitenencia/v4/advanced-usage/using-a-custom-tenant-model/#performing-actions-when-a-tenant-gets-created).
+Con el cambio automático configurado, puedes migrar las bases de datos de los inquilinos. Como hay muchas formas de hacerlo, el paquete no se encarga de crear las bases de datos. Debes hacerlo en tu propio código. Un buen lugar para activarlo es [al crear un modelo `Inquilino`](/docs/laravel-multitenencia/v4/uso-avanzado/utilizando-un-modelo-de-inquilino-personalizado/).
 
-If you want to get a feel of how the package works, you could create a couple of rows in the `tenants` table, fill the `database` attribute and manually create those databases.
+### Migrar bases de datos de inquilinos
 
-### Migrating tenant databases
+Las migraciones futuras para inquilinos deben guardarse en `database/migrations`.
 
-When you want to migrate tenant databases, all future migrations should be stored in `database/migrations`.
-
-To perform these migrations, you can use [the `tenants:migrate` command](/docs/laravel-multitenencia/v4/advanced-usage/executing-artisan-commands-for-each-tenant). This command will loop over all rows in the `tenants` table. It will make each tenant the current one, and migrate the database.
+Para ejecutarlas, usa el comando `tenants:artisan`. Este comando recorre todos los inquilinos, hace a cada uno el actual y ejecuta el comando Artisan en ese contexto:
 
 ```bash
-php artisan tenants:artisan "migrate --database=tenant"
+php artisan tenants:artisan "migrate --database=inquilino"
 ```
 
-If you want to have dedicated directory for tenant migrations (`database/migrations/tenant`) you can simply run:
+Si quieres un directorio dedicado para migraciones de inquilinos (`database/migrations/inquilinos`):
 
 ```bash
-php artisan tenants:artisan "migrate --path=database/migrations/tenant --database=tenant"
+php artisan tenants:artisan "migrate --path=database/migrations/inquilinos --database=inquilino"
 ```
 
-### Seeding tenant databases
+### Sembrar bases de datos de inquilinos
 
-If you also want to seed tenant database you can execute this command:
+Para sembrar también la base de datos del inquilino:
 
 ```bash
-php artisan tenants:artisan "migrate --database=tenant --seed"
+php artisan tenants:artisan "migrate --database=inquilino --seed"
 ```
 
-This will cause all seeders to run. In your `DatabaseSeeder` you can use `Tenant::comprobarActual()` to verify if the seeding is done for a tenant or a propietario.
+En el `DatabaseSeeder`, puedes usar `Inquilino::comprobarActual()` para verificar si el sembrado es para un inquilino o para el propietario:
 
 ```php
 use Illuminate\Database\Seeder;
-use Eddwar\Multitenencia\Models\Tenant;
+use Eddwar\Multitenencia\Models\Inquilino;
 
 class DatabaseSeeder extends Seeder
 {
-    public function run()
+    public function run(): void
     {
-        Tenant::comprobarActual()
+        Inquilino::comprobarActual()
            ? $this->runTenantSpecificSeeders()
            : $this->runPropietarioSpecificSeeders();
     }
 
-    public function runTenantSpecificSeeders()
+    public function runTenantSpecificSeeders(): void
     {
-        // run tenant specific seeders
+        // sembrar datos del inquilino
     }
 
-    public function runPropietarioSpecificSeeders()
+    public function runPropietarioSpecificSeeders(): void
     {
-        // run propietario specific seeders
+        // sembrar datos del propietario
     }
 }
 ```
 
-### Preparing models
+### Preparar modelos
 
-All models in your project should either use the `UtilizaConexionDelPropietario` or `UtilizaConexionDelInquilino`, depending on if the underlying table of the models lives in the propietario or tenant database.
+Todos los modelos del proyecto deben usar `UtilizaConexionDelPropietario` o `UtilizaConexionDelInquilino`, según si la tabla subyacente vive en la base de datos del propietario o del inquilino.
 
-### Next steps
+### Siguientes pasos
 
-When using multiple tenants, you probably want to [isolate the cache](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/prefixing-cache/). This is performed by task classes that will be executed when making a tenant the current one.
+Al usar múltiples inquilinos, probablemente quieras [aislar la caché](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/prefijando-la-cache/). Esto se realiza mediante clases de tareas que se ejecutan al hacer a un inquilino el actual.

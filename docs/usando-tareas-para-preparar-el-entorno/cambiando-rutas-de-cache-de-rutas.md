@@ -15,9 +15,9 @@ To use this task, you should uncomment it in the `switch_tenant_tasks` section o
 ```php
 // in config/multitenencia.php
 
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     \Eddwar\Multitenencia\Tasks\TareaDeCacheDeCambioDeRuta::class,
-    // other tasks
+    // otras tareas
 ],
 ```
 
@@ -25,7 +25,7 @@ To use this task, you should uncomment it in the `switch_tenant_tasks` section o
 
 In the default scenario, all tenants have different routes. The package creates a route cache file for each tenant: `bootstrap/cache/routes-v7-tenant-{$tenant->id}.php`.
 
-**Most importantly**, you should use `php artisan tenant:artisan route:cache` to cache your routes instead of Laravel's default `route:cache` command. This will make sure a different route cache file is generated for each tenant.
+**Lo más importante**, debes usar `php artisan tenants:artisan route:cache` para cachear las rutas en lugar del comando `route:cache` por defecto de Laravel. Esto asegura que se genere un archivo de caché de rutas diferente para cada inquilino.
 
 ## Route cache shared across the tenants
 
@@ -36,7 +36,7 @@ To enable the feature you should set to `true` the `shared_routes_cache` section
 ```php
 // in config/multitenencia.php
 
-'shared_routes_cache' => true,
+'cache_de_rutas_compartido' => true,
 ```
 
-**Most importantly**, you should use `php artisan tenant:artisan route:cache --tenant=YOUR-TENANT-ID` to cache your routes instead of Laravel's default `route:cache` command. This will make sure a different route cache file is generated for each tenant.
+**Lo más importante**, debes usar `php artisan tenants:artisan route:cache --tenant=TU-TENANT-ID` para cachear las rutas en lugar del comando `route:cache` por defecto de Laravel. Esto asegura que se genere el archivo de caché correcto.

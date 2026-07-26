@@ -56,13 +56,12 @@ class MultitenenciaServiceProvider extends PackageServiceProvider
         $tenantModelClass = config('multitenencia.modelo_del_inquilino');
         if ($tenantModelClass && class_exists($tenantModelClass)) {
             $clearCache = static function ($model) {
-                Cache::forget('multitenencia:domains_map');
-                Cache::forget("multitenencia:model:{$model->id}");
-
                 try {
                     $cacheStore = config('multitenencia.cache.store_del_propietario') ?? config('cache.default');
                     /** @var Repository $cache */
                     $cache = Cache::store($cacheStore);
+                    $cache->forget('multitenencia:domains_map');
+                    $cache->forget("multitenencia:model:{$model->id}");
                     if ($cache->supportsTags()) {
                         $cache->tags(['tenant_resolver'])->flush();
                     }

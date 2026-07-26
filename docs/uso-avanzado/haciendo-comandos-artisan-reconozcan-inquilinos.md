@@ -42,10 +42,10 @@ php artisan your-favorite-command --tenant=1
 
 Si no puede cambiar un comando de Artisan directamente (por ejemplo, un comando del propio Laravel o un comando de un paquete de terceros), puede usar `tenants:artisan <comando artisan>`. Este comando recorrerá los inquilinos, establecerá cada uno como el actual y ejecutará el comando de Artisan para ese contexto.
 
-Cuando cada uno de sus inquilinos tiene su propia base de datos, podría migrar cada base de datos de inquilino con este comando (asumiendo que esté usando una tarea como [`TareaDelCambioDeBaseDeDatosDelInquilino`](https://docs.spatie.be/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/switching-databases)):
+Cuando cada inquilino tiene su propia base de datos, puedes migrar cada base de datos de inquilino con este comando, asumiendo que usas `TareaDelCambioDeBaseDeDatosDelInquilino` dentro de `tareas_de_cambio_de_inquilino`:
 
 ```bash
-php artisan tenants:artisan migrate
+php artisan tenants:artisan "migrate --database=inquilino"
 ```
 
 Estamos usando el comando `migrate` aquí como ejemplo, pero puede pasar cualquier comando que desee.
@@ -55,7 +55,7 @@ Estamos usando el comando `migrate` aquí como ejemplo, pero puede pasar cualqui
 Si usa comillas alrededor de la parte del comando, puede usar cualquier argumento y opción que admita dicho comando.
 
 ```bash
-php artisan tenants:artisan "migrate --seed"
+php artisan tenants:artisan "migrate --database=inquilino --seed"
 ```
 
 ### Ejecutar comandos Artisan para inquilinos específicos
@@ -63,7 +63,7 @@ php artisan tenants:artisan "migrate --seed"
 Si el comando solo necesita ejecutarse para un inquilino específico, puede pasar su `id` a la opción `tenant`.
 
 ```bash
-php artisan tenants:artisan "migrate --seed" --tenant=123
+php artisan tenants:artisan "migrate --database=inquilino --seed" --tenant=123
 ```
 
 ### Persistencia del estado

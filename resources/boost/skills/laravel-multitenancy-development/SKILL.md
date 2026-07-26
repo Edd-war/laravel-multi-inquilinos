@@ -1,13 +1,13 @@
 ---
 name: laravel-multitenencia-development
-description: Build and work with Eddwar Laravel Multitenencia features, including tenant finders, the current tenant, switch tasks, multi-database setups, tenant-aware queues and artisan commands.
+description: Desarrollar y trabajar con las funcionalidades de Laravel Multitenencia de Eddwar, incluyendo buscadores de inquilinos, el inquilino actual, tareas de cambio, configuraciones multi-base de datos, colas y comandos Artisan conscientes del inquilino.
 ---
 
 # Laravel Multitenencia Development
 
 ## When to use this skill
 
-Use this skill when working with multi-tenant Laravel applications using `spatie/laravel-multitenencia`: determining the current tenant per request, isolating databases or caches per tenant, making queued jobs and artisan commands tenant-aware, or designing propietario/tenant migration strategies.
+Use this skill when working with multi-tenant Laravel applications using `edd-war/laravel-multitenencia`: determining the current tenant per request, isolating databases or caches per tenant, making queued jobs and artisan commands tenant-aware, or designing propietario/tenant migration strategies.
 
 ## Core Concepts
 
@@ -20,9 +20,9 @@ Use this skill when working with multi-tenant Laravel applications using `spatie
 ## Setup
 
 ```bash
-composer require spatie/laravel-multitenencia
-php artisan vendor:publish --provider="Eddwar\Multitenencia\MultitenenciaServiceProvider" --tag="multitenencia-config"
-php artisan vendor:publish --provider="Eddwar\Multitenencia\MultitenenciaServiceProvider" --tag="multitenencia-migrations"
+composer require edd-war/laravel-multitenencia
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-config"
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-migrations"
 ```
 
 Register middleware in `bootstrap/app.php`:
@@ -41,12 +41,12 @@ Register middleware in `bootstrap/app.php`:
 Set the finder class in `config/multitenencia.php`:
 
 ```php
-'tenant_finder' => \Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
+'buscador_de_inquilinos' => \Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
 ```
 
-`BuscadorDeInquilinosDeDominio` looks up the tenant by matching `$request->getHost()` against a `domain` column on the tenants table.
+`BuscadorDeInquilinosDeDominio` looks up the tenant by matching `$request->getHost()` against a `dominio` column on the inquilinos table.
 
-To use a custom finder, extend `BuscadorDeInquilinos` and implement `findForRequest`:
+To use a custom finder, extend `BuscadorDeInquilinos` and implement `buscarParaPeticion`:
 
 ```php
 use Illuminate\Http\Request;
@@ -55,7 +55,7 @@ use Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos;
 
 class SubBuscadorDeInquilinosDeDominio extends BuscadorDeInquilinos
 {
-    public function findForRequest(Request $request): ?EsInquilino
+    public function buscarParaPeticion(Request $request): ?EsInquilino
     {
         $subdomain = explode('.', $request->getHost())[0];
 
@@ -67,19 +67,19 @@ class SubBuscadorDeInquilinosDeDominio extends BuscadorDeInquilinos
 ## Working with the Current Tenant
 
 ```php
-use Eddwar\Multitenencia\Models\Tenant;
+use Eddwar\Multitenencia\Models\Inquilino;
 
 // Make a tenant current (fires events, runs tasks)
-$tenant->hacerActual();
+$inquilino->hacerActual();
 
 // Read the current tenant
-Tenant::current();        // returns ?Tenant
-app('currentTenant');     // same, via container
+Inquilino::actual();        // returns ?Inquilino
+app('currentTenant');       // same, via container
 
 // Check and forget
-Tenant::comprobarActual();   // bool
-$tenant->esActual();     // bool
-Tenant::olvidarActual();  // runs forget tasks, returns the tenant
+Inquilino::comprobarActual();  // bool
+$inquilino->esActual();        // bool
+Inquilino::olvidarActual();    // runs forget tasks
 ```
 
 ## Executing Code for a Tenant or Propietario
@@ -87,7 +87,7 @@ Tenant::olvidarActual();  // runs forget tasks, returns the tenant
 `execute()` makes the tenant current, runs the callable, then restores the previous state:
 
 ```php
-$result = $tenant->execute(function (Tenant $tenant) {
+$result = $inquilino->execute(function (Inquilino $inquilino) {
     return cache()->get('stats');
 });
 ```
@@ -95,7 +95,7 @@ $result = $tenant->execute(function (Tenant $tenant) {
 `callback()` returns a closure — useful for the scheduler:
 
 ```php
-$schedule->call($tenant->callback(fn () => cache()->flush()))->daily();
+$schedule->call($inquilino->callback(fn () => cache()->flush()))->daily();
 ```
 
 To run code **outside** any tenant context, use `Propietario`:
@@ -111,18 +111,18 @@ Propietario::execute(function () {
 `InquilinoCollection` adds iteration helpers: `eachCurrent`, `mapCurrent`, `filterCurrent`, `rejectCurrent`.
 
 ```php
-Tenant::all()->eachCurrent(function (Tenant $tenant) {
+Inquilino::all()->eachCurrent(function (Inquilino $inquilino) {
     cache()->flush();
 });
 ```
 
 ## Multi-Database Setup
 
-Define a `tenant` connection (with `database => null`) and a `propietario` connection in `config/database.php`:
+Define a `inquilino` connection (with `database => null`) and a `propietario` connection in `config/database.php`:
 
 ```php
 'connections' => [
-    'tenant' => [
+    'inquilino' => [
         'driver'   => 'mysql',
         'database' => null,
         'host'     => '127.0.0.1',
@@ -143,8 +143,8 @@ Define a `tenant` connection (with `database => null`) and a `propietario` conne
 Set the connection names in `config/multitenencia.php`:
 
 ```php
-'tenant_database_connection_name'   => 'tenant',
-'propietario_database_connection_name' => 'propietario',
+'nombre_de_conexion_de_la_base_de_datos_del_inquilino'   => 'inquilino',
+'nombre_de_conexion_de_la_base_de_datos_del_propietario' => 'propietario',
 ```
 
 Apply the correct connection trait to every Eloquent model:
@@ -161,7 +161,7 @@ class Post extends Model
 // Models whose table lives in the propietario DB
 use Eddwar\Multitenencia\Models\Concerns\UtilizaConexionDelPropietario;
 
-class Tenant extends Model
+class Inquilino extends Model
 {
     use UtilizaConexionDelPropietario;
 }
@@ -172,7 +172,7 @@ class Tenant extends Model
 Tasks run every time `hacerActual()` or `olvidarActual()` is called. Register them in `config/multitenencia.php`:
 
 ```php
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     \Eddwar\Multitenencia\Tasks\TareaDelCambioDeBaseDeDatosDelInquilino::class,
     // \Eddwar\Multitenencia\Tasks\TareaDeCacheDePrefijos::class,
     // \Eddwar\Multitenencia\Tasks\TareaDeCacheDeCambioDeRuta::class,
@@ -181,9 +181,9 @@ Tasks run every time `hacerActual()` or `olvidarActual()` is called. Register th
 
 Built-in tasks:
 
-- **`TareaDelCambioDeBaseDeDatosDelInquilino`** — sets the `tenant` connection's `database` to `$tenant->database` and purges the connection. Required for multi-DB.
-- **`TareaDeCacheDePrefijos`** — overrides `cache.prefix` to `tenant_{$tenant->id}`. Works with memory-based stores (Redis, APC).
-- **`TareaDeCacheDeCambioDeRuta`** — switches `APP_ROUTES_CACHE` to a per-tenant file (`bootstrap/cache/routes-v7-tenant-{id}.php`), or a shared file when `'shared_routes_cache' => true`.
+- **`TareaDelCambioDeBaseDeDatosDelInquilino`** — sets the `inquilino` connection's `database` to `$inquilino->base_de_datos` and purges the connection. Required for multi-DB.
+- **`TareaDeCacheDePrefijos`** — overrides `cache.prefix` to `tenant_{$inquilino->id}`. Works with memory-based stores (Redis, APC).
+- **`TareaDeCacheDeCambioDeRuta`** — switches `APP_ROUTES_CACHE` to a per-tenant file (`bootstrap/cache/routes-v7-tenant-{id}.php`), or a shared file when `'cache_de_rutas_compartido' => true`.
 
 To create a custom task, implement `TareaDeCambioDeInquilino`:
 
@@ -193,9 +193,9 @@ use Eddwar\Multitenencia\Tasks\TareaDeCambioDeInquilino;
 
 class SwitchStorageDiskTask implements TareaDeCambioDeInquilino
 {
-    public function hacerActual(EsInquilino $tenant): void
+    public function hacerActual(EsInquilino $inquilino): void
     {
-        config(['filesystems.disks.s3.bucket' => $tenant->bucket]);
+        config(['filesystems.disks.s3.bucket' => $inquilino->bucket]);
     }
 
     public function olvidarActual(): void
@@ -208,22 +208,22 @@ class SwitchStorageDiskTask implements TareaDeCambioDeInquilino
 Tasks can receive constructor parameters via array config:
 
 ```php
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     \App\Tasks\YourTask::class => ['key' => 'value'],
 ],
 ```
 
 ## Middleware
 
-- **`NecesitaInquilino`** — aborts the request (throws `NoHayInquilinoActual`) if no tenant is current. Apply to all tenant routes.
+- **`NecesitaInquilino`** — aborts the request (throws `ExcepcionNoHayInquilinoActual`) if no tenant is current. Apply to all tenant routes.
 - **`AsegurarSesionValidaDeInquilino`** — stores the first-seen tenant ID in the session and aborts with 401 if a different tenant ID is detected later. Prevents session cross-contamination.
 
 ## Custom Tenant Model
 
-Set `tenant_model` in `config/multitenencia.php` and point it to your own class:
+Set `modelo_del_inquilino` in `config/multitenencia.php` and point it to your own class:
 
 ```php
-'tenant_model' => \App\Models\Tenant::class,
+'modelo_del_inquilino' => \App\Models\MiInquilino::class,
 ```
 
 To use an existing model (e.g. a Jetstream `Team`) as a tenant, implement `EsInquilino` with the `ImplementaInquilino` trait:
@@ -245,7 +245,7 @@ Use a `creating` hook to provision a database when a tenant is created:
 ```php
 protected static function booted(): void
 {
-    static::creating(fn (Tenant $tenant) => $tenant->createDatabase());
+    static::creating(fn (Inquilino $inquilino) => $inquilino->createDatabase());
 }
 ```
 
@@ -260,16 +260,16 @@ php artisan migrate --path=database/migrations/propietario --database=propietari
 **Tenant** migrations run for every tenant via `tenants:artisan`:
 
 ```bash
-php artisan tenants:artisan "migrate --database=tenant"
-php artisan tenants:artisan "migrate --database=tenant --seed" --tenant=123
+php artisan tenants:artisan "migrate --database=inquilino"
+php artisan tenants:artisan "migrate --database=inquilino --seed" --tenant=123
 ```
 
-In seeders, branch on `Tenant::comprobarActual()`:
+In seeders, branch on `Inquilino::comprobarActual()`:
 
 ```php
 public function run(): void
 {
-    Tenant::comprobarActual()
+    Inquilino::comprobarActual()
         ? $this->runTenantSpecificSeeders()
         : $this->runPropietarioSpecificSeeders();
 }
@@ -280,7 +280,7 @@ Programmatic migrations use `AccionMigrarInquilino`:
 ```php
 use Eddwar\Multitenencia\Actions\AccionMigrarInquilino;
 
-app(AccionMigrarInquilino::class)->fresh()->seed()->execute($tenant);
+app(AccionMigrarInquilino::class)->fresh()->seed()->execute($inquilino);
 ```
 
 ## Artisan Commands
@@ -288,7 +288,7 @@ app(AccionMigrarInquilino::class)->fresh()->seed()->execute($tenant);
 `tenants:artisan` loops over all tenants (or the specified ones) and runs a command for each:
 
 ```bash
-php artisan tenants:artisan "migrate --database=tenant"
+php artisan tenants:artisan "migrate --database=inquilino"
 php artisan tenants:artisan "cache:clear" --tenant=1 --tenant=2
 ```
 
@@ -306,7 +306,7 @@ class SendReports extends Command
 
     public function handle(): void
     {
-        $this->line('Sending for tenant: ' . Tenant::current()->name);
+        $this->line('Sending for tenant: ' . Inquilino::actual()->nombre);
     }
 }
 ```
@@ -347,23 +347,25 @@ class SyncGlobalData implements ShouldQueue, InquilinoNoReconocido
 Or list classes in config:
 
 ```php
-'tenant_aware_jobs'     => [\App\Jobs\ProcessReport::class],
-'not_tenant_aware_jobs' => [\App\Jobs\SyncGlobalData::class],
+'trabajos_que_reconocen_inquilinos'     => [\App\Jobs\ProcessReport::class],
+'trabajos_que_no_reconocen_inquilinos'  => [\App\Jobs\SyncGlobalData::class],
 ```
 
 For closures dispatched to the queue, pass the tenant explicitly:
 
 ```php
-$tenant = Tenant::current();
+$inquilino = Inquilino::actual();
 
-dispatch(function () use ($tenant) {
-    $tenant->execute(function () {
+dispatch(function () use ($inquilino) {
+    $inquilino->execute(function () {
         // tenant context is active here
     });
 });
 ```
 
 If a tenant-aware job fires but the tenant cannot be resolved, `ExcepcionInquilinoActualNoReconocidoEnTrabajoEnCola` is thrown and the job is deleted from the queue.
+
+Jobs that do **not** recognize the tenant force `olvidarActual()` before execution — no previous tenant context leaks into non-tenant-aware jobs.
 
 ## Events
 
@@ -380,6 +382,6 @@ All events live in the `Eddwar\Multitenencia\Events` namespace and carry `public
 ## Performance
 
 - Switch tasks run synchronously on every `hacerActual()` / `olvidarActual()` call — keep them fast.
-- `shared_routes_cache` avoids generating one routes file per tenant when routes are identical across tenants.
+- `cache_de_rutas_compartido` avoids generating one routes file per tenant when routes are identical across tenants.
 - Octane is supported out of the box: the service provider hooks into `RequestReceived` / `RequestTerminated` events automatically when `LARAVEL_OCTANE` is set.
 - The current tenant is stored in Laravel `Context` (`tenantId`), which queue workers read to restore tenant state before processing a job.

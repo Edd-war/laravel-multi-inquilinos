@@ -1,43 +1,44 @@
 ---
-title: Upgrade guide
+title: Guía de actualización
 weight: 2
 ---
 
-In the `4.x` version, we have introduced the contract concept to the Tenant so that any model could implement the interface.
+En la versión `4.x` se introdujo el concepto de contrato para el Inquilino, de modo que cualquier modelo pueda implementar la interfaz.
 
-The first step to reach our goal is upgrading our package version.
+El primer paso es actualizar la versión del paquete:
 
 ```bash
-composer require Eddwar/laravel-multitenencia:^4.0
+composer require edd-war/laravel-multitenencia:^4.0
 ```
 
-### Removed `UsesTenantModel` trait
+### Trait `UsesTenantModel` eliminado
 
-Remove any reference to our old trait `Eddwar\Models\Concerns\UsesTenantModel`, because now the right `Tenant` instance can be resolved using `app(EsInquilino::class)`.
+Elimina cualquier referencia al trait anterior `Eddwar\Models\Concerns\UsesTenantModel`, ya que la instancia correcta del inquilino ahora se resuelve mediante `app(EsInquilino::class)`.
 
-### Tenant finder
+### Buscador de inquilinos
 
-If you are using the default finder included in the package, no changes are required by your side. However, when you are using a custom finder, you need to change the returned value in `findForRequest` method to `?EsInquilino`. Example:
+Si utilizas el buscador incluido en el paquete, no es necesario ningún cambio. Si usas un buscador personalizado, debes cambiar el valor de retorno del método `buscarParaPeticion` a `?EsInquilino`. Ejemplo:
 
 ```php
 use Illuminate\Http\Request;
 use Eddwar\Multitenencia\Contracts\EsInquilino;
+use Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos;
 
-class YourCustomTenantFinder extends BuscadorDeInquilinos
+class TuBuscadorPersonalizado extends BuscadorDeInquilinos
 {
-    public function findForRequest(Request $request): ?EsInquilino
+    public function buscarParaPeticion(Request $request): ?EsInquilino
     {
         // ...
     }
 }
 ```
 
-### Custom tasks
+### Tareas de cambio
 
-As has already been pointed out for the finder, the same change is required for any task because our `TareaDeCambioDeInquilino` interface now is:
+El mismo cambio aplica para cualquier tarea personalizada, ya que la interfaz `TareaDeCambioDeInquilino` ahora es:
 
 ```php
-public function hacerActual(EsInquilino $tenant): void;
+public function hacerActual(EsInquilino $inquilino): void;
 ```
 
-So, it requires replacing the method parameter from `Tenant $tenant` to `EsInquilino $tenant.`
+Por lo tanto, debes reemplazar el parámetro `Tenant $tenant` por `EsInquilino $inquilino` en el método.

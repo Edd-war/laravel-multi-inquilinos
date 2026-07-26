@@ -1,144 +1,113 @@
 ---
-title: Base installation
+title: Instalación base
 weight: 1
 ---
 
-This package can be installed via composer:
+Este paquete se instala mediante Composer:
 
 ```bash
-composer require spatie/laravel-multitenencia
+composer require edd-war/laravel-multitenencia
 ```
 
-### Publishing the config file
+### Publicar el archivo de configuración
 
-You must publish the config file:
+Debes publicar el archivo de configuración:
 
 ```bash
-php artisan vendor:publish --provider="Eddwar\Multitenencia\MultitenenciaServiceProvider" --tag="multitenencia-config"
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-config"
 ```
 
-This is the default content of the config file that will be published at `config/multitenencia.php`:
+Esto publicará el archivo de configuración en `config/multitenencia.php`. A continuación se muestra un resumen de las claves más importantes:
 
 ```php
 <?php
 
-use Illuminate\Broadcasting\BroadcastEvent;
-use Illuminate\Events\CallQueuedListener;
-use Illuminate\Mail\SendQueuedMailable;
-use Illuminate\Notifications\SendQueuedNotifications;
-use Illuminate\Queue\CallQueuedClosure;
-use Eddwar\Multitenencia\Actions\AccionOlvidarInquilinoActual;
 use Eddwar\Multitenencia\Actions\AccionHacerColaInquilinoReconocido;
-use Eddwar\Multitenenciaa\Actions\AccionHacerInquilinoActual;
+use Eddwar\Multitenencia\Actions\AccionHacerInquilinoActual;
 use Eddwar\Multitenencia\Actions\AccionMigrarInquilino;
-use Eddwar\Multitenencia\Models\Tenant;
+use Eddwar\Multitenencia\Actions\AccionOlvidarInquilinoActual;
+use Eddwar\Multitenencia\Jobs\InquilinoNoReconocido;
+use Eddwar\Multitenencia\Jobs\InquilinoReconocido;
+use Eddwar\Multitenencia\Models\Inquilino;
 
 return [
     /*
-     * This class is responsible for determining which tenant should be current
-     * for the given request.
+     * Esta clase es responsable de determinar cuál inquilino debe ser el actual
+     * para la solicitud dada.
      *
-     * This class should extend `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`
-     *
+     * Debe extender de `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`
      */
-    'tenant_finder' => null,
+    'buscador_de_inquilinos' => null,
 
     /*
-     * These fields are used by tenant:artisan command to match one or more tenant.
+     * Campos utilizados por el comando tenants:artisan para filtrar inquilinos.
      */
-    'tenant_artisan_search_fields' => [
-        'id',
-    ],
+    'campos_de_busqueda_artisan_para_inquilinos' => ['id'],
 
     /*
-     * These tasks will be performed when switching tenants.
-     *
-     * A valid task is any class that implements Eddwar\Multitenencia\Tasks\TareaDeCambioDeInquilino
+     * Tareas que se ejecutan al cambiar de inquilino.
+     * Deben implementar TareaDeCambioDeInquilino.
      */
-    'switch_tenant_tasks' => [
+    'tareas_de_cambio_de_inquilino' => [
         // \Eddwar\Multitenencia\Tasks\TareaDeCacheDePrefijos::class,
         // \Eddwar\Multitenencia\Tasks\TareaDelCambioDeBaseDeDatosDelInquilino::class,
         // \Eddwar\Multitenencia\Tasks\TareaDeCacheDeCambioDeRuta::class,
     ],
 
     /*
-     * This class is the model used for storing configuration on tenants.
-     *
-     * It must  extend `Eddwar\Multitenencia\Models\Tenant::class` or
-     * implement `Eddwar\Multitenencia\Contracts\EsInquilino::class` interface
+     * Modelo utilizado para almacenar la configuración de los inquilinos.
+     * Debe extender Inquilino o implementar EsInquilino.
      */
-    'tenant_model' => Tenant::class,
+    'modelo_del_inquilino' => Inquilino::class,
 
     /*
-     * If there is a current tenant when dispatching a job, the id of the current tenant
-     * will be automatically set on the job. When the job is executed, the set
-     * tenant on the job will be made current.
+     * Si hay un inquilino actual al despachar un trabajo, su ID se incluirá
+     * automáticamente en el trabajo para restaurarlo al ejecutarlo.
      */
     'colas_reconocen_inquilinos_por_defecto' => true,
 
     /*
-     * The connection name to reach the tenant database.
-     *
-     * Set to `null` to use the default connection.
+     * Nombre de conexión para la base de datos del inquilino.
+     * null usa la conexión por defecto.
      */
-    'tenant_database_connection_name' => null,
+    'nombre_de_conexion_de_la_base_de_datos_del_inquilino' => null,
 
     /*
-     * The connection name to reach the propietario database.
+     * Nombre de conexión para la base de datos del propietario.
      */
-    'propietario_database_connection_name' => null,
+    'nombre_de_conexion_de_la_base_de_datos_del_propietario' => null,
 
     /*
-     * This key will be used to associate the current tenant in the context
+     * Acciones personalizables del paquete.
+     * Tu acción personalizada siempre debe extender la acción por defecto.
      */
-    'current_tenant_context_key' => 'tenantId',
-
-    /*
-     * This key will be used to bind the current tenant in the container.
-     */
-    'current_tenant_container_key' => 'currentTenant',
-
-    /**
-     * Set it to `true` if you like to cache the tenant(s) routes
-     * in a shared file using the `TareaDeCacheDeCambioDeRuta`.
-     */
-    'shared_routes_cache' => false,
-
-    /*
-     * You can customize some of the behavior of this package by using your own custom action.
-     * Your custom action should always extend the default one.
-     */
-    'actions' => [
-        'make_tenant_current_action' => AccionHacerInquilinoActual::class,
-        'forget_current_tenant_action' => AccionOlvidarInquilinoActual::class,
-        'make_queue_tenant_aware_action' => AccionHacerColaInquilinoReconocido::class,
-        'migrate_tenant' => AccionMigrarInquilino::class,
+    'acciones' => [
+        'accion_hacer_inquilino_actual'         => AccionHacerInquilinoActual::class,
+        'accion_olvidar_inquilino_actual'        => AccionOlvidarInquilinoActual::class,
+        'accion_hacer_cola_inquilino_reconocido' => AccionHacerColaInquilinoReconocido::class,
+        'migrar_inquilino'                       => AccionMigrarInquilino::class,
     ],
 
     /*
-     * Jobs tenant aware even if these don't implement the InquilinoReconocido interface.
+     * Trabajos que siempre reconocen inquilino (aunque no implementen InquilinoReconocido).
      */
-    'tenant_aware_jobs' => [
-        // ...
-    ],
+    'trabajos_que_reconocen_inquilinos' => [],
 
     /*
-     * Jobs not tenant aware even if these don't implement the InquilinoNoReconocido interface.
+     * Trabajos que nunca reconocen inquilino (aunque no implementen InquilinoNoReconocido).
      */
-    'not_tenant_aware_jobs' => [
-        // ...
-    ],
+    'trabajos_que_no_reconocen_inquilinos' => [],
 ];
 ```
 
-### Protecting against cross tenant abuse
+### Protección contra abuso entre inquilinos
 
-To prevent users from a tenant abusing their session to access another tenant, you must use the `Eddwar\Multitenencia\Http\Middleware\AsegurarSesionValidaDeInquilino` middleware on all tenant-aware routes.
+Para evitar que usuarios de un inquilino accedan a otro usando su sesión, aplica el middleware `AsegurarSesionValidaDeInquilino` en todas las rutas conscientes del inquilino.
 
-If all your application routes are tenant-aware, you can add it to your global middleware in `bootstrap/app.php`
+Si todas las rutas son conscientes del inquilino, agrégalo al middleware global en `bootstrap/app.php`:
 
 ```php
-// in `bootstrap/app.php`
+// en `bootstrap/app.php`
 
 return Application::configure(basePath: dirname(__DIR__))
     // ...
@@ -151,10 +120,10 @@ return Application::configure(basePath: dirname(__DIR__))
     });
 ```
 
-If only some routes are tenant-aware, create a new middleware group:
+Si solo algunas rutas son conscientes del inquilino, crea un grupo de middleware:
 
 ```php
-// in `bootstrap/app.php`
+// en `bootstrap/app.php`
 
 return Application::configure(basePath: dirname(__DIR__))
     // ...
@@ -167,20 +136,17 @@ return Application::configure(basePath: dirname(__DIR__))
     });
 ```
 
-Then apply the group to the appropriate routes:
+Luego aplica el grupo a las rutas correspondientes:
 
 ```php
-// in a routes file
+// en un archivo de rutas
 
 Route::middleware('tenant')->group(function() {
-    // routes
+    // rutas
 });
 ```
 
-This middleware will respond with an unauthorized response code (401) when the user tries to use their session to view another tenant. Make sure to include `\Eddwar\Multitenencia\Http\Middleware\NecesitaInquilino` first, as this will [handle any cases where a valid tenant cannot be found](/docs/laravel-multitenencia/v4/advanced-usage/ensuring-a-current-tenant-has-been-set).
+### Siguientes pasos
 
-### Next steps
-
-If you prefer to use just one glorious database for all your tenants, read the installation instructions for [using a single database](/docs/laravel-multitenencia/v4/installation/using-a-single-database).
-
-If you want to use separate databases for each tenant, head over to the installation instructions for [using multiple databases](/docs/laravel-multitenencia/v4/installation/using-multiple-databases).
+- Para usar una sola base de datos para todos los inquilinos: [usando una sola base de datos](usando-una-sola-base-de-datos.md).
+- Para usar bases de datos separadas por inquilino: [usando múltiples bases de datos](usando-multiples-bases-de-datos.md).

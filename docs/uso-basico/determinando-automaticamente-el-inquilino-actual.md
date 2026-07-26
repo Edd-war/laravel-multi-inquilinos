@@ -18,33 +18,39 @@ En el archivo de configuración `multitenencia.php`, debe especificar el buscado
 'buscador_de_inquilinos' => Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
 ```
 
-Si el buscador de inquilinos devuelve un inquilino, se ejecutarán [todas las tareas configuradas](https://docs.spatie.be/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/descripcion-general/) en él. Después de eso, la instancia del inquilino se vinculará en el contenedor utilizando la clave `currentTenant` (o el valor de la clave `clave_de_contenedor_del_inquilino_actual` configurada).
+Si el buscador de inquilinos devuelve un inquilino, se ejecutarán [todas las tareas configuradas](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/descripcion-general/) en él. Después de eso, la instancia del inquilino se vinculará en el contenedor utilizando la clave `currentTenant` (o el valor de la clave `clave_de_contenedor_del_inquilino_actual` configurada).
 
 ```php
 app('currentTenant') // devolverá el inquilino actual o `null`
 ```
 
-Puede crear su propio buscador de inquilinos. Un buscador de inquilinos válido es cualquier clase que extienda de `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`. Debe implementar este método abstracto:
+Puede crear su propio buscador de inquilinos. Un buscador válido es cualquier clase que extienda de `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`. Debe implementar este método abstracto:
 
 ```php
-abstract public function findForRequest(Request $request): ?EsInquilino;
+abstract public function buscarParaPeticion(Request $request): ?EsInquilino;
 ```
 
-Así es como está implementado el `BuscadorDeInquilinosDeDominio` por defecto. El método `getTenantModel` devuelve una instancia de la clase especificada en la clave `modelo_del_inquilino` del archivo de configuración `multitenencia.php`.
+Así es como está implementado el `BuscadorDeInquilinosDeDominio` por defecto:
 
 ```php
 namespace Eddwar\Multitenencia\BuscadorDeInquilinos;
 
 use Illuminate\Http\Request;
 use Eddwar\Multitenencia\Contracts\EsInquilino;
+use Illuminate\Database\Eloquent\Model;
 
 class BuscadorDeInquilinosDeDominio extends BuscadorDeInquilinos
 {
-    public function findForRequest(Request $request): ?EsInquilino
+    public function buscarParaPeticion(Request $request): ?EsInquilino
     {
         $host = $request->getHost();
 
-        return app(EsInquilino::class)::whereDomain($host)->first();
+        /** @var Model $tenantModel */
+        $tenantModel = app(EsInquilino::class);
+
+        $tenant = $tenantModel->newQuery()->where('dominio', $host)->first();
+
+        return $tenant instanceof EsInquilino ? $tenant : null;
     }
 }
 ```

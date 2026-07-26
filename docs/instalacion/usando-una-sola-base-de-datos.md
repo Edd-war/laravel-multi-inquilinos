@@ -1,27 +1,27 @@
 ---
-title: Using a single database
+title: Usando una sola base de datos
 weight: 2
 ---
 
-Before using the following instructions, make sure you have performed [the base installation steps](/docs/laravel-multitenencia/v4/installation/base-installation) first.
+Antes de seguir estas instrucciones, asegúrate de haber completado la [instalación base](instalacion-base.md).
 
-Only use the instructions on this page if you want to use one database.
+Usa las instrucciones de esta página solo si quieres usar una única base de datos para todos los inquilinos.
 
-### Migrating the database
+### Migrar la base de datos
 
-With the database connection set up, we can migrate the propietario database.
+Con la conexión de base de datos configurada, podemos ejecutar las migraciones.
 
-First, you must publish and run the migration:
+Primero, publica y ejecuta la migración:
 
 ```bash
-php artisan vendor:publish --provider="Eddwar\Multitenencia\multitenenciaServiceProvider" --tag="multitenencia-migrations"
+php artisan vendor:publish --provider="Eddwar\Multitenencia\Providers\MultitenenciaServiceProvider" --tag="laravel-multitenencia-migrations"
 php artisan migrate --path=database/migrations/propietario
 ```
 
-This will create the `tenants` table which holds configuration per tenant.
+Esto creará la tabla `inquilinos`, que almacena la configuración por inquilino.
 
-### Next steps
+### Siguientes pasos
 
-When using multiple tenants, you probably want to [isolate the cache](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/prefixing-cache/) or use your own separated filesystems per tenant, ... These things are performed by [task classes](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/overview/) that will be executed when making a tenant the current one.
+Al usar múltiples inquilinos con una sola base de datos, probablemente quieras [aislar la caché](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/prefijando-la-cache/) o usar sistemas de archivos separados por inquilino. Esto se realiza mediante [clases de tareas](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/descripcion-general/) que se ejecutan al hacer a un inquilino el actual.
 
-The package also has an option to [make the queue tenant aware](/docs/laravel-multitenencia/v4/basic-usage/making-queues-tenant-aware/).
+El paquete también tiene opción de [hacer que las colas reconozcan inquilinos](/docs/laravel-multitenencia/v4/uso-basico/haciendo-que-las-colas-reconozcan-inquilinos/).

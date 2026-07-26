@@ -1,8 +1,8 @@
 ---
-title: Questions and issues
+title: Preguntas y problemas
 weight: 5
 ---
 
-Find yourself stuck using the package? Found a bug? Do you have general questions or suggestions for improving laravel-multitenencia? Feel free to [create an issue on GitHub](https://github.com/spatie/laravel-multitenencia/issues), we'll try to address it as soon as possible.
+¿Tienes problemas usando el paquete? ¿Encontraste un error? ¿Tienes sugerencias para mejorar `laravel-multitenencia`? No dudes en [abrir un issue en GitHub](https://github.com/Edd-war/laravel-multitenencia/issues).
 
-If you've found a bug regarding security please mail [freek@spatie.be](mailto:freek@spatie.be) instead of using the issue tracker.
+Si encuentras un problema de seguridad, por favor utiliza el canal privado definido por el propietario del repositorio en lugar del rastreador de issues público.

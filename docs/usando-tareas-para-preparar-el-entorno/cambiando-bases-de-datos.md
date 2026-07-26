@@ -1,19 +1,19 @@
 ---
-title: Switching databases
+title: Cambiando bases de datos
 weight: 3
 ---
 
-The `Eddwar\Multitenencia\Tasks\SwitchDatabaseTask` can switch the configured database name of the `tenant` database connection. The database name used will be in the `database` attribute of the `Tenant` model.
+`Eddwar\Multitenencia\Tasks\TareaDelCambioDeBaseDeDatosDelInquilino` puede cambiar el nombre de base de datos configurado en la conexión `inquilino`. El nombre de la base de datos proviene del atributo `base_de_datos` del modelo `Inquilino`.
 
-To use this task, you should add it to the `switch_tenant_tasks` key in the `multitenencia` config file.
+Para usar esta tarea, agrégala a la clave `tareas_de_cambio_de_inquilino` en el archivo de configuración `multitenencia.php`:
 
 ```php
-// in config/multitenencia.php
+// en config/multitenencia.php
 
-'switch_tenant_tasks' => [
+'tareas_de_cambio_de_inquilino' => [
     \Eddwar\Multitenencia\Tasks\TareaDelCambioDeBaseDeDatosDelInquilino::class,
-    // other tasks
+    // otras tareas
 ],
 ```
 
-If you want to change other database connection properties beside the database name, you should [create your own task](/docs/laravel-multitenencia/v4/using-tasks-to-prepare-the-environment/creating-your-own-task/). You can take a look at the source code of `TareaDelCambioDeBaseDeDatosDelInquilino` for inspiration.
+Si deseas cambiar otras propiedades de la conexión de base de datos además del nombre, debes [crear tu propia tarea](/docs/laravel-multitenencia/v4/usando-tareas-para-preparar-el-entorno/creando-tu-propia-tarea/). Puedes revisar el código fuente de `TareaDelCambioDeBaseDeDatosDelInquilino` como referencia.

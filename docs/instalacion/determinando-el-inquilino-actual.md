@@ -1,22 +1,22 @@
 ---
-title: Determining the current tenant
+title: Determinando el inquilino actual
 weight: 4
 ---
 
-Per request, the package can determine the "current" tenant. This is done by a `BuscadorDeInquilinos`. The package ships with a `BuscadorDeInquilinosDeDominio` that will make the tenant active whose `domain` attribute value matches the host of the current request.
+Por cada solicitud, el paquete puede determinar cuál inquilino debe estar activo. Esto se realiza mediante un `BuscadorDeInquilinos`. El paquete incluye `BuscadorDeInquilinosDeDominio`, que busca un `Inquilino` cuyo atributo `dominio` coincida con el hostname de la solicitud actual.
 
-To use that tenant finder, specify its class name in the `tenant_finder` key of the `multitenencia` config file.
+Para usar ese buscador, especifica su nombre de clase en la clave `buscador_de_inquilinos` del archivo de configuración `multitenencia.php`:
 
 ```php
-// in multitenencia.php
+// en multitenencia.php
+
 /*
- * This class is responsible for determining which tenant should be current
- * for the given request.
+ * Esta clase es responsable de determinar cuál inquilino debe ser el actual
+ * para la solicitud dada.
  *
- * This class should extend `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`
- *
+ * Debe extender de `Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinos`
  */
-'tenant_finder' => Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
+'buscador_de_inquilinos' => Eddwar\Multitenencia\BuscadorDeInquilinos\BuscadorDeInquilinosDeDominio::class,
 ```
 
-If you want to determine the "current" tenant some other way, you can [create a custom tenant finder](/docs/laravel-Multitenencia/v4/basic-usage/automatically-determining-the-current-tenant/).
+Si deseas determinar el inquilino actual de otra manera, puedes [crear un buscador personalizado](/docs/laravel-multitenencia/v4/uso-basico/determinando-automaticamente-el-inquilino-actual/).
