@@ -91,7 +91,6 @@ class MultitenenciaCacheServiceProvider extends ServiceProvider
 
         if ($tenantStore) {
             $cache->extend($tenantStore, function (Application $app, array $config) use ($tenantConnection, $cache) {
-                // @phpstan-ignore-next-line
                 return $cache->createDatabaseDriver([
                     'connection' => $tenantConnection,
                     'table' => config('cache.stores.database.table', 'cache'),
@@ -120,7 +119,6 @@ class MultitenenciaCacheServiceProvider extends ServiceProvider
 
         if ($landlordStore) {
             $cache->extend($landlordStore, function (Application $app, array $config) use ($landlordConnection, $cache) {
-                // @phpstan-ignore-next-line
                 return $cache->createDatabaseDriver([
                     'connection' => $landlordConnection,
                     'table' => config('cache.stores.database.table', 'cache'),
