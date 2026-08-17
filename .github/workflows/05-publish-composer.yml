@@ -1,0 +1,365 @@
+name: Publicar Paquete Composer
+
+on:
+    release:
+        types: [published]
+
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Tag/versión a publicar (ej: v13.0.0)"
+                required: true
+                type: string
+
+# Prevenir ejecuciones concurrentes
+# Los releases no deben cancelarse en progreso para garantizar que se completen
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    publish:
+        name: 📦 Publicar paquete Composer
+        runs-on: ubuntu-latest
+
+        # NO ejecutar en commits de bots
+        if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+
+        permissions:
+            contents: read
+            packages: read
+
+        steps:
+            - name: 📥 Checkout código
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: 🔍 Determinar versión
+              id: version
+              run: |
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                    VERSION="${{ github.event.inputs.tag }}"
+                  else
+                    VERSION="${{ github.event.release.tag_name }}"
+                  fi
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "📦 Publicando versión: $VERSION"
+
+            - name: ✅ Verificar que el tag existe
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  git fetch --tags
+                  if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+                    echo "❌ Error: El tag $VERSION no existe"
+                    exit 1
+                  fi
+                  echo "✅ Tag $VERSION encontrado"
+
+            - name: 🔧 Configurar Node.js 20
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  registry-url: 'https://npm.pkg.github.com'
+
+            - name: 📦 Instalar autenticador-token-cli desde GitHub Packages
+              run: |
+                  echo "📥 Instalando @edd-war/autenticador-token-cli desde GitHub Packages..."
+                  npm install -g @edd-war/autenticador-token-cli
+                  echo "✅ autenticador-token-cli instalado"
+                  token-cli --version
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: 🔐 Configurar perfil de GitHub App
+              run: |
+                  echo "🔧 Configurando perfil ci-publisher..."
+
+                  # Crear directorio de configuración
+                  mkdir -p ~/.config/autenticador-token/profiles
+
+                  # Crear archivo de perfil
+                  cat > ~/.config/autenticador-token/profiles/ci-publisher.profile.json << PROFILE_EOF
+                  {
+                    "appId": "${{ secrets.GH_APP_ID }}",
+                    "clientId": "${{ secrets.GH_APP_CLIENT_ID }}",
+                    "privateKey": "${{ secrets.GH_APP_PRIVATE_KEY }}"
+                  }
+                  PROFILE_EOF
+
+                  # Crear índice de perfiles
+                  cat > ~/.config/autenticador-token/profiles/index.json << INDEX_EOF
+                  {
+                    "defaultProfile": "ci-publisher",
+                    "profiles": ["ci-publisher"]
+                  }
+                  INDEX_EOF
+
+                  echo "✅ Perfil ci-publisher configurado"
+
+            - name: 🎫 Generar Installation Access Token
+              id: token
+              continue-on-error: false
+              run: |
+                  echo "🔑 Generando Installation Access Token con GitHub App..."
+
+                  # Generar token usando el perfil configurado
+                  TOKEN=$(token-cli token --format token --profile ci-publisher)
+
+                  # Enmascarar el token en los logs
+                  echo "::add-mask::$TOKEN"
+
+                  # Exportar token como output
+                  echo "github_app_token=$TOKEN" >> $GITHUB_OUTPUT
+                  echo "auth_method=github_app" >> $GITHUB_OUTPUT
+
+                  echo "✅ Token de GitHub App generado y enmascarado"
+
+            - name: 🔑 Configurar token de fallback (PAT)
+              id: fallback
+              if: steps.token.outcome == 'failure'
+              run: |
+                  echo "⚠️ GitHub App token falló, usando PAT como fallback..."
+
+                  # Validar que GH_PACKAGES_PAT esté configurado
+                  if [ -z "${{ secrets.GH_PACKAGES_PAT }}" ]; then
+                      echo "❌ Error: GH_PACKAGES_PAT secret not configured"
+                      exit 1
+                  fi
+
+                  # Usar GH_PACKAGES_PAT como fallback
+                  TOKEN="${{ secrets.GH_PACKAGES_PAT }}"
+
+                  # Enmascarar el token en los logs
+                  echo "::add-mask::$TOKEN"
+
+                  # Exportar token como output (sobrescribe el anterior)
+                  echo "github_app_token=$TOKEN" >> $GITHUB_OUTPUT
+                  echo "auth_method=pat" >> $GITHUB_OUTPUT
+
+                  echo "✅ PAT configurado como fallback"
+
+            - name: 🔍 Determinar método de autenticación final
+              id: auth
+              run: |
+                  # Determinar qué método de autenticación se usó
+                  if [ "${{ steps.token.outcome }}" = "success" ]; then
+                      AUTH_METHOD="github_app"
+                      TOKEN="${{ steps.token.outputs.github_app_token }}"
+                  else
+                      AUTH_METHOD="pat"
+                      TOKEN="${{ steps.fallback.outputs.github_app_token }}"
+                  fi
+
+                  # Exportar valores finales
+                  echo "method=$AUTH_METHOD" >> $GITHUB_OUTPUT
+                  echo "token=$TOKEN" >> $GITHUB_OUTPUT
+
+                  echo "✅ Método de autenticación: $AUTH_METHOD"
+
+            - name: 🐘 Configurar PHP 8.5
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+                  coverage: none
+                  tools: composer:v2
+
+            - name: 🔧 Configurar autenticación de Composer
+              run: |
+                  AUTH_METHOD="${{ steps.auth.outputs.method }}"
+
+                  if [ "$AUTH_METHOD" = "github_app" ]; then
+                    echo "🔐 Configurando autenticación de Composer con GitHub App token..."
+                  else
+                    echo "🔐 Configurando autenticación de Composer con PAT (fallback)..."
+                  fi
+
+                  composer config --global github-oauth.github.com "${{ steps.auth.outputs.token }}"
+                  echo "✅ Autenticación de Composer configurada ($AUTH_METHOD)"
+
+            - name: ✅ Validar composer.json
+              run: |
+                  echo "🔍 Validando composer.json..."
+                  composer validate --strict
+                  echo "✅ composer.json válido"
+
+            - name: 📦 Obtener directorio de caché de Composer
+              id: composer-cache
+              run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+            - name: 💾 Configurar caché de Composer
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: v1-${{ runner.os }}-composer-publish-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: v1-${{ runner.os }}-composer-
+
+            - name: 📥 Instalar dependencias
+              run: |
+                  echo "📦 Instalando dependencias de Composer..."
+                  composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+                  echo "✅ Dependencias instaladas"
+
+            - name: 🧪 Ejecutar tests
+              id: tests
+              continue-on-error: false
+              run: |
+                  echo "🧪 Ejecutando tests Pest..."
+                  vendor/bin/pest
+                  TEST_EXIT_CODE=$?
+                  echo "Tests completados (código salida: $TEST_EXIT_CODE)"
+                  exit $TEST_EXIT_CODE
+            - name: 📊 Generar resumen de publicación
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  PKG_NAME=$(jq -r .name composer.json)
+                  PKG_DESC=$(jq -r .description composer.json)
+                  REPO_URL="https://github.com/${{ github.repository }}"
+
+                  # Determinar estado de tests
+                  if [ "${{ steps.tests.outcome }}" = "success" ]; then
+                    TEST_STATUS="✅ Pasados"
+                  elif [ "${{ steps.tests.outcome }}" = "failure" ]; then
+                    TEST_STATUS="❌ Fallidos"
+                  else
+                    TEST_STATUS="⚠️ No ejecutados"
+                  fi
+
+                  # Determinar método de autenticación usado
+                  AUTH_METHOD="${{ steps.auth.outputs.method }}"
+                  if [ "$AUTH_METHOD" = "github_app" ]; then
+                    AUTH_STATUS="🔐 GitHub App Token (seguro, expira en ~1h)"
+                  elif [ "$AUTH_METHOD" = "pat" ]; then
+                    AUTH_STATUS="🔑 Personal Access Token (fallback)"
+                  else
+                    AUTH_STATUS="❓ Desconocido"
+                  fi
+
+                  cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+                  ## 📦 Paquete Composer Publicado
+
+                  | Campo | Valor |
+                  |-------|-------|
+                  EOF
+
+                  echo "| Nombre | \`$PKG_NAME\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Versión | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Descripción | $PKG_DESC |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Tests | $TEST_STATUS |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Validación | ✅ composer.json válido |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Autenticación | $AUTH_STATUS |" >> $GITHUB_STEP_SUMMARY
+
+                  cat << EOF >> $GITHUB_STEP_SUMMARY
+
+                  ---
+
+                  ### 🔧 Instalación vía VCS (Repositorio GitHub Privado)
+
+                  #### Opción 1: Usando GitHub App Token (Recomendado - Más Seguro)
+
+                  **Paso 1a: Instalar autenticador-token-cli**
+
+                  \`\`\`bash
+                  npm install -g @edd-war/autenticador-token-cli
+                  \`\`\`
+
+                  **Paso 1b: Configurar tu perfil de GitHub App**
+
+                  Crea el archivo \`~/.config/autenticador-token/profiles/mi-perfil.profile.json\`:
+
+                  \`\`\`json
+                  {
+                    "appId": "TU_APP_ID",
+                    "clientId": "TU_CLIENT_ID",
+                    "privateKey": "-----BEGIN RSA PRIVATE KEY-----\\n...\\n-----END RSA PRIVATE KEY-----"
+                  }
+                  \`\`\`
+
+                  Y el índice \`~/.config/autenticador-token/profiles/index.json\`:
+
+                  \`\`\`json
+                  {
+                    "defaultProfile": "mi-perfil",
+                    "profiles": ["mi-perfil"]
+                  }
+                  \`\`\`
+
+                  **Paso 1c: Generar token y configurar Composer**
+
+                  \`\`\`bash
+                  # Generar token (expira en ~1 hora)
+                  TOKEN=\$(token-cli token --format token --profile mi-perfil)
+
+                  # Configurar Composer
+                  composer config --global github-oauth.github.com "\$TOKEN"
+                  \`\`\`
+
+                  > 💡 **Ventaja**: Los tokens de GitHub App expiran en ~1 hora y no están vinculados a usuarios individuales
+
+                  ---
+
+                  #### Opción 2: Usando Personal Access Token (PAT Tradicional)
+
+                  **Paso 1: Configurar autenticación**
+
+                  \`\`\`bash
+                  composer config --global github-oauth.github.com <TU_GITHUB_TOKEN>
+                  \`\`\`
+
+                  > 💡 Genera un token en: https://github.com/settings/tokens con scope \`repo\`
+
+                  ---
+
+                  #### Paso 2: Agregar repositorio a tu proyecto
+
+                  En tu \`composer.json\`:
+
+                  \`\`\`json
+                  {
+                      "repositories": [
+                          {
+                              "type": "vcs",
+                              "url": "$REPO_URL"
+                          }
+                      ],
+                      "require": {
+                          "$PKG_NAME": "^${VERSION#v}"
+                      }
+                  }
+                  \`\`\`
+
+                  > 💡 **Nota sobre la versión**: El formato \`^${VERSION#v}\` elimina automáticamente el prefijo 'v' si existe (ej: v13.0.0 → 13.0.0). Si el tag no tiene 'v', se usa tal cual.
+
+                  #### Paso 3: Instalar el paquete
+
+                  \`\`\`bash
+                  composer update $PKG_NAME
+                  \`\`\`
+
+                  ---
+
+                  ### 📝 Notas de Seguridad
+
+                  - ✅ **GitHub App Tokens** expiran en ~1 hora (más seguros)
+                  - ⚠️ **Personal Access Tokens** no expiran automáticamente (menos seguros)
+                  - 🔐 Este paquete se distribuye como **repositorio VCS privado**
+                  - 📦 GitHub Packages no soporta nativamente Composer, por eso usamos VCS
+                  - 🏷️ Las versiones se basan en los **tags de Git** (ej: v13.0.0)
+                  - 🌐 Para distribución pública, considera registrar en [Packagist](https://packagist.org/)
+
+                  ---
+
+                  ### 🔐 Secrets Requeridos en GitHub Actions
+
+                  Para usar este workflow, configura estos secrets en tu repositorio:
+
+                  | Secret | Descripción |
+                  |--------|-------------|
+                  | \`GH_APP_ID\` | App ID de la GitHub App |
+                  | \`GH_APP_CLIENT_ID\` | Client ID de la GitHub App |
+                  | \`GH_APP_PRIVATE_KEY\` | Contenido completo del archivo \`.pem\` de la private key |
+                  | \`GH_PACKAGES_PAT\` | Personal Access Token (PAT) para fallback si falla la autenticación con GitHub App |
+                  EOF
+
+                  echo "✅ Resumen de publicación generado en GitHub Actions Summary"

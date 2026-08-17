@@ -1,0 +1,88 @@
+name: Análisis de Código
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Prevenir ejecuciones concurrentes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  estilo:
+    name: Verificar estilo de código (Pint)
+    runs-on: ubuntu-latest
+
+    # NO ejecutar en commits de bots
+    if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: dom, curl, libxml, mbstring, zip
+          coverage: none
+
+      - name: Obtener directorio de caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Configurar caché de Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: v1-${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: v1-${{ runner.os }}-composer-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+
+      - name: Verificar estilo con Pint (solo reporte)
+        run: vendor/bin/pint --test
+
+  analisis-estatico:
+    name: Análisis estático (PHPStan)
+    runs-on: ubuntu-latest
+
+    # NO ejecutar en commits de bots
+    if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: dom, curl, libxml, mbstring, zip
+          coverage: none
+
+      - name: Obtener directorio de caché de Composer
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Configurar caché de Composer
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: v1-${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: v1-${{ runner.os }}-composer-
+
+      - name: Instalar dependencias
+        run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+
+      - name: Ejecutar PHPStan
+        run: vendor/bin/phpstan analyse --memory-limit=2G --error-format=github

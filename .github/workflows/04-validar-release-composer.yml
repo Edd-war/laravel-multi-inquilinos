@@ -1,0 +1,175 @@
+name: Validar Release Composer
+
+on:
+    release:
+        types: [published]
+
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: "Tag/versión a validar (ej: v13.0.0)"
+                required: true
+                type: string
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    validate-release:
+        name: Validar paquete Composer
+        runs-on: ubuntu-latest
+
+        permissions:
+            contents: read
+
+        steps:
+            - name: Checkout código
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Determinar versión
+              id: version
+              run: |
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+                    VERSION="${{ github.event.inputs.tag }}"
+                  else
+                    VERSION="${{ github.event.release.tag_name }}"
+                  fi
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+                  echo "📦 Validando versión: $VERSION"
+
+            - name: Verificar que el tag existe
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  git fetch --tags
+                  if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+                    echo "❌ Error: El tag $VERSION no existe"
+                    exit 1
+                  fi
+                  echo "✅ Tag $VERSION encontrado"
+
+            - name: Configurar PHP
+              uses: shivammathur/setup-php@v2
+              with:
+                  php-version: "8.5"
+                  extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite
+                  coverage: none
+                  tools: composer:v2
+
+            - name: Validar composer.json
+              run: composer validate --strict
+
+            - name: Obtener directorio de caché de Composer
+              id: composer-cache
+              run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+            - name: Configurar caché de Composer
+              uses: actions/cache@v4
+              with:
+                  path: ${{ steps.composer-cache.outputs.dir }}
+                  key: v1-${{ runner.os }}-composer-release-${{ hashFiles('**/composer.lock') }}
+                  restore-keys: v1-${{ runner.os }}-composer-
+
+            - name: Instalar dependencias
+              run: composer install --prefer-dist --no-interaction --no-progress --optimize-autoloader --no-scripts
+
+            - name: Ejecutar tests
+              id: tests
+              continue-on-error: false
+              run: vendor/bin/pest
+
+            - name: Verificar estructura del paquete
+              run: |
+                  echo "📋 Información del paquete:"
+                  echo "  Nombre: $(jq -r .name composer.json)"
+                  echo "  Descripción: $(jq -r .description composer.json)"
+                  echo "  Licencia: $(jq -r .license composer.json)"
+                  echo "  Versión (tag): ${{ steps.version.outputs.version }}"
+                  echo ""
+                  echo "📁 Estructura del paquete:"
+                  echo "  - src/ ($(find src -name '*.php' | wc -l) archivos PHP)"
+                  if [ -d "config" ]; then echo "  - config/ (configuración)"; fi
+                  if [ -d "database" ]; then echo "  - database/ (migraciones)"; fi
+                  echo ""
+                  echo "✅ Paquete validado correctamente"
+
+            - name: Generar resumen de instalación
+              run: |
+                  VERSION="${{ steps.version.outputs.version }}"
+                  PKG_NAME=$(jq -r .name composer.json)
+                  PKG_DESC=$(jq -r .description composer.json)
+
+                  # Determinar estado de tests
+                  if [ "${{ steps.tests.outcome }}" = "success" ]; then
+                    TEST_STATUS="✅ Pasados"
+                  elif [ "${{ steps.tests.outcome }}" = "failure" ]; then
+                    TEST_STATUS="❌ Fallidos"
+                  else
+                    TEST_STATUS="⚠️ No ejecutados"
+                  fi
+
+                  cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+                  ## 📦 Release Composer Validado
+
+                  | Campo | Valor |
+                  |-------|-------|
+                  EOF
+
+                  echo "| Nombre | \`$PKG_NAME\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Versión | \`$VERSION\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Descripción | $PKG_DESC |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Tests | $TEST_STATUS |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Validación | ✅ composer.json válido |" >> $GITHUB_STEP_SUMMARY
+
+                  cat << EOF >> $GITHUB_STEP_SUMMARY
+
+                  ---
+
+                  ### 🔧 Instalación vía VCS (Repositorio GitHub Privado)
+
+                  #### Paso 1: Configurar autenticación (solo una vez)
+
+                  \`\`\`bash
+                  composer config --global github-oauth.github.com <TU_GITHUB_TOKEN>
+                  \`\`\`
+
+                  > 💡 Genera un token en: https://github.com/settings/tokens con scope \`repo\`
+
+                  #### Paso 2: Agregar repositorio a tu proyecto
+
+                  En tu \`composer.json\`:
+
+                  \`\`\`json
+                  {
+                      "repositories": [
+                          {
+                              "type": "vcs",
+                              "url": "https://github.com/${{ github.repository }}"
+                          }
+                      ],
+                      "require": {
+                          "$PKG_NAME": "^${VERSION#v}"
+                      }
+                  }
+                  \`\`\`
+
+                  #### Paso 3: Instalar el paquete
+
+                  \`\`\`bash
+                  composer update $PKG_NAME
+                  \`\`\`
+
+                  ---
+
+                  ### 📝 Notas
+
+                  - Este paquete se distribuye como **repositorio VCS privado**
+                  - GitHub Packages no soporta nativamente Composer, por eso usamos VCS
+                  - Las versiones se basan en los **tags de Git** (ej: v13.0.0)
+                  - Para distribución pública, considera registrar en [Packagist](https://packagist.org/)
+
+                  EOF
+
+                  echo "✅ Resumen generado en GitHub Actions Summary"

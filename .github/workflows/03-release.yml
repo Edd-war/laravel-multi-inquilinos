@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  # Trigger manual
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión del release (ej: v1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: '¿Es un pre-release?'
+        required: false
+        type: boolean
+        default: false
+  
+  # Trigger automático cuando se crea un tag v*
+  push:
+    tags:
+      - 'v*'
+
+# Prevenir ejecuciones concurrentes
+# NOTA: Aunque las instrucciones de Copilot (línea 287) recomiendan `cancel-in-progress: true` para ahorrar recursos,
+# aquí se usa `cancel-in-progress: false` intencionalmente porque los releases no deben ser cancelados en progreso.
+# Esto garantiza que un release iniciado se complete, incluso si se dispara otro release por error o por múltiples tags.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Crear GitHub Release
+    runs-on: ubuntu-latest
+    
+    # NO ejecutar en commits de bots
+    if: github.actor != 'github-actions[bot]' && github.actor != 'dependabot[bot]'
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determinar versión
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Verificar que el tag existe
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if ! git rev-parse "${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "Error: El tag ${{ steps.version.outputs.version }} no existe"
+            echo "Por favor, crea el tag primero con: git tag ${{ steps.version.outputs.version }}"
+            exit 1
+          fi
+      
+      - name: Preparar notas del release
+        id: release_notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES="Release ${VERSION}"
+          
+          # Intentar extraer notas del CHANGELOG.md si existe
+          if [ -f "CHANGELOG.md" ]; then
+            # Buscar la sección correspondiente a esta versión con manejo de errores
+            EXTRACTED=$(awk "/## \[${VERSION#v}\]/,/## \[/{if (/## \[${VERSION#v}\]/) next; if (/## \[/) exit; print}" CHANGELOG.md 2>/dev/null || echo "")
+            if [ -n "$EXTRACTED" ]; then
+              NOTES="$EXTRACTED"
+            fi
+          fi
+          
+          # Guardar las notas en un archivo temporal
+          echo "$NOTES" > ${{ runner.temp }}/release_notes.md
+      
+      - name: Crear GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body_path: ${{ runner.temp }}/release_notes.md
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease || false }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

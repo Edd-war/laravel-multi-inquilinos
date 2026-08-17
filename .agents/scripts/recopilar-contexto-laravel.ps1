@@ -8,7 +8,7 @@ param(
         "config"
         "database"
         "resources"
-        "scripts"
+        ".agents/scripts"
         "composer.json"
         ".php-cs-fixer.dist.php"
         # =========== #2 ============
@@ -31,10 +31,10 @@ param(
     ),
 
     [Parameter(Mandatory = $false)]
-    [string] $Out = ".\scratch\contexto-laravel-multitenencia-01.md",
-    # [string] $Out = ".\scratch\contexto-laravel-multitenencia-02.md",
-    # [string] $Out = ".\scratch\contexto-laravel-multitenencia-03.md",
-    # [string] $Out = ".\scratch\contexto-laravel-multitenencia-04.md",
+    [string] $Out = ".\build\scratch\contexto-laravel-multitenencia-01.md",
+    # [string] $Out = ".\build\scratch\contexto-laravel-multitenencia-02.md",
+    # [string] $Out = ".\build\scratch\contexto-laravel-multitenencia-03.md",
+    # [string] $Out = ".\build\scratch\contexto-laravel-multitenencia-04.md",
 
     [Parameter(Mandatory = $false)]
     [string[]] $AllowedExtensions = @(
@@ -73,7 +73,7 @@ param(
         "public/build/",
         "public/hot",
         "coverage/",
-        "scratch/"
+        "build/scratch/"
     ),
 
     [Parameter(Mandatory = $false)]

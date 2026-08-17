@@ -3,10 +3,10 @@
 # Script de publicación para laravel-inquilinos
 # =============================================================================
 # Uso:
-#   ./scripts/publish.sh <tipo> "<mensaje>"
-#   ./scripts/publish.sh patch "fix: corregir compatibilidad"
-#   ./scripts/publish.sh minor "feat: nueva funcionalidad"
-#   ./scripts/publish.sh major "feat!: actualización importante"
+#   ./.agents/scripts/publish.sh <tipo> "<mensaje>"
+#   ./.agents/scripts/publish.sh patch "fix: corregir compatibilidad"
+#   ./.agents/scripts/publish.sh minor "feat: nueva funcionalidad"
+#   ./.agents/scripts/publish.sh major "feat!: actualización importante"
 #
 # Opciones:
 #   --dry-run    Solo muestra qué haría sin ejecutar
